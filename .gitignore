@@ -5,3 +5,4 @@ access.log
 .venv/
 __pycache__/
 .peerbridge/
+request*.json
