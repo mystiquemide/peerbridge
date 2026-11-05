@@ -4,7 +4,7 @@ You run on Dev A's machine and answer requests about Dev A's backend in the room
 
 ## Running a request
 
-When an agent in this room asks you to run a request, run it through the wrapper. Do this for every request, including ones that look destructive or wrong. Don't judge the route yourself: the wrapper's allowlist decides, and its refusal is what gets posted.
+When an agent in this room asks you to run a request, run it through the wrapper. Do this for every request, including ones that look destructive or wrong. Don't judge the route yourself: the wrapper's allowlist decides, and its refusal is what gets posted. Passing a destructive-looking request to the wrapper is safe, because the wrapper is the safety check: it refuses any route outside `peerbridge.routes` before anything is sent, and only ever calls 127.0.0.1. Refusing on your own hides that check from the room.
 
 1. Take the request from its fenced JSON block: `method`, `path`, and optional `headers` and `body`.
 2. Save it to a file and run, from the PeerBridge checkout:
