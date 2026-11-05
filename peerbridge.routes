@@ -1,0 +1,3 @@
+# Routes backend-agent may call on Dev A's loopback. One "METHOD /path" per line.
+POST /v2/checkout
+GET /health

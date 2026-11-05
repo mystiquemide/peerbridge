@@ -1,3 +1,7 @@
 PROJECT_PLAN.md
 PROJECT_STATE.md
 .env
+access.log
+.venv/
+__pycache__/
+.peerbridge/
