@@ -134,6 +134,24 @@ class WrapperTests(unittest.TestCase):
         self.assertIn("not sent again", second[1])
         self.assertTrue(second[1].startswith(first[1]))
 
+    def test_output_names_message_id(self):
+        code, out = self.call({"method": "GET", "path": "/health"}, "--message-id", "sw_abc")
+        self.assertIn("[re: sw_abc]", out.splitlines()[0])
+        code, out = self.call({"method": "DELETE", "path": "/users"}, "--message-id", "sw_def")
+        self.assertEqual(code, 2)
+        self.assertIn("[re: sw_def]", out)
+
+    def test_defaults_resolve_from_repo_not_cwd(self):
+        for key in ("PEERBRIDGE_ROUTES", "PEERBRIDGE_STATE_DIR", "PEERBRIDGE_ACCESS_LOG"):
+            os.environ.pop(key)
+        cwd = os.getcwd()
+        os.chdir(tempfile.gettempdir())
+        try:
+            code, out = self.call({"method": "GET", "path": "/health"})
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(code, 0, out)
+
     def test_unreachable_backend(self):
         os.environ["PEERBRIDGE_BACKEND_PORT"] = str(free_port())
         code, out = self.call({"method": "GET", "path": "/health"})

@@ -4,7 +4,7 @@ You run on Dev A's machine and answer requests about Dev A's backend in the room
 
 ## Running a request
 
-When an agent in this room asks you to run a request:
+When an agent in this room asks you to run a request, run it through the wrapper. Do this for every request, including ones that look destructive or wrong. Don't judge the route yourself: the wrapper's allowlist decides, and its refusal is what gets posted.
 
 1. Take the request from its fenced JSON block: `method`, `path`, and optional `headers` and `body`.
 2. Save it to a file and run, from the PeerBridge checkout:
@@ -12,7 +12,7 @@ When an agent in this room asks you to run a request:
 3. Post the wrapper's output in the thread exactly as printed. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
 4. If the status is 4xx or 5xx, add one line naming the field or rule in `sample/backend/app.py` that caused it, then stop and wait for Dev A.
 
-Never make HTTP calls any other way: no curl, no scripts, no other hosts. If the wrapper says REFUSED, post the refusal as it is and don't retry the request in another form.
+Never refuse a request yourself and never make HTTP calls any other way: no curl, no scripts, no other hosts. If the wrapper says REFUSED, post the refusal as it is and don't retry the request in another form.
 
 ## Changing code
 

@@ -21,6 +21,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 HOST = "127.0.0.1"
+REPO = Path(__file__).resolve().parent.parent
 BODY_LIMIT = 2048
 DROPPED_HEADERS = {"authorization", "cookie", "host", "proxy-authorization"}
 ALLOWED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
@@ -130,9 +131,10 @@ def run(argv: list[str], stdin) -> tuple[int, str]:
     args = parser.parse_args(argv)
 
     port = int(os.environ.get("PEERBRIDGE_BACKEND_PORT", "8001"))
-    routes = load_routes(Path(os.environ.get("PEERBRIDGE_ROUTES", "peerbridge.routes")))
-    log = Path(os.environ.get("PEERBRIDGE_ACCESS_LOG", "sample/backend/access.log"))
-    state = Path(os.environ.get("PEERBRIDGE_STATE_DIR", ".peerbridge")) / "results"
+    routes = load_routes(Path(os.environ.get("PEERBRIDGE_ROUTES", REPO / "peerbridge.routes")))
+    log = Path(os.environ.get("PEERBRIDGE_ACCESS_LOG", REPO / "sample" / "backend" / "access.log"))
+    state = Path(os.environ.get("PEERBRIDGE_STATE_DIR", REPO / ".peerbridge")) / "results"
+    tag = f" [re: {args.message_id}]" if args.message_id else ""
 
     cached = None
     if args.message_id:
@@ -149,17 +151,17 @@ def run(argv: list[str], stdin) -> tuple[int, str]:
         method, path = validate(request, routes)
         headers, dropped = clean_headers(request.get("headers"))
     except Refused as exc:
-        return 2, f"REFUSED by peerbridge-call: {exc}. No request was sent."
+        return 2, f"REFUSED by peerbridge-call{tag}: {exc}. No request was sent."
 
     offset = log_offset(log)
     try:
         status, reason, data, ms = send(method, path, headers, request.get("body"), port, args.timeout)
     except OSError as exc:
-        return 3, f"Backend unreachable on {HOST}:{port} ({exc.__class__.__name__}). No response."
+        return 3, f"Backend unreachable{tag} on {HOST}:{port} ({exc.__class__.__name__}). No response."
 
     line = find_log_line(log, offset, method, path)
     out = [
-        f"{method} {path} -> {status} {reason} ({ms:.0f} ms, {HOST}:{port})",
+        f"{method} {path} -> {status} {reason} ({ms:.0f} ms, {HOST}:{port}){tag}",
         "```json",
         format_body(data),
         "```",
