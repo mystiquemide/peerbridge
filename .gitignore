@@ -6,3 +6,4 @@ access.log
 __pycache__/
 .peerbridge/
 request*.json
+node_modules/
