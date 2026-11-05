@@ -31,6 +31,19 @@ class Refused(Exception):
     pass
 
 
+def load_config(path: Path) -> dict:
+    """KEY=VALUE lines from peerbridge.env next to the wrapper. They override the
+    environment, so a root-owned install can't be redirected by its caller."""
+    config = {}
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                config[key.strip()] = value.strip()
+    return config
+
+
 def load_routes(path: Path) -> set[tuple[str, str]]:
     routes = set()
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -130,10 +143,11 @@ def run(argv: list[str], stdin) -> tuple[int, str]:
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args(argv)
 
-    port = int(os.environ.get("PEERBRIDGE_BACKEND_PORT", "8001"))
-    routes = load_routes(Path(os.environ.get("PEERBRIDGE_ROUTES", REPO / "peerbridge.routes")))
-    log = Path(os.environ.get("PEERBRIDGE_ACCESS_LOG", REPO / "sample" / "backend" / "access.log"))
-    state = Path(os.environ.get("PEERBRIDGE_STATE_DIR", REPO / ".peerbridge")) / "results"
+    settings = {**os.environ, **load_config(REPO / "peerbridge.env")}
+    port = int(settings.get("PEERBRIDGE_BACKEND_PORT", "8001"))
+    routes = load_routes(Path(settings.get("PEERBRIDGE_ROUTES", REPO / "peerbridge.routes")))
+    log = Path(settings.get("PEERBRIDGE_ACCESS_LOG", REPO / "sample" / "backend" / "access.log"))
+    state = Path(settings.get("PEERBRIDGE_STATE_DIR", REPO / ".peerbridge")) / "results"
     tag = f" [re: {args.message_id}]" if args.message_id else ""
 
     cached = None

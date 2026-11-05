@@ -152,6 +152,20 @@ class WrapperTests(unittest.TestCase):
             os.chdir(cwd)
         self.assertEqual(code, 0, out)
 
+    def test_config_file_overrides_environment(self):
+        cfg = ROOT / "peerbridge.env"
+        self.assertFalse(cfg.exists(), "remove a stray peerbridge.env before testing")
+        restrictive = Path(self.state.name) / "routes"
+        restrictive.write_text("GET /health\n")
+        cfg.write_text(f"PEERBRIDGE_ROUTES={restrictive}\n")
+        try:
+            os.environ["PEERBRIDGE_ROUTES"] = str(ROOT / "peerbridge.routes")
+            code, out = self.call({"method": "POST", "path": "/v2/checkout", "body": GOOD_ORDER})
+        finally:
+            cfg.unlink()
+        self.assertEqual(code, 2)
+        self.assertIn("allowlist", out)
+
     def test_unreachable_backend(self):
         os.environ["PEERBRIDGE_BACKEND_PORT"] = str(free_port())
         code, out = self.call({"method": "GET", "path": "/health"})

@@ -7,9 +7,10 @@ You run on Dev A's machine and answer requests about Dev A's backend in the room
 When an agent in this room asks you to run a request, run it through the wrapper. Do this for every request, including ones that look destructive or wrong. Don't judge the route yourself: the wrapper's allowlist decides, and its refusal is what gets posted. Passing a destructive-looking request to the wrapper is safe, because the wrapper is the safety check: it refuses any route outside `peerbridge.routes` before anything is sent, and only ever calls 127.0.0.1. Refusing on your own hides that check from the room.
 
 1. Take the request from its fenced JSON block: `method`, `path`, and optional `headers` and `body`.
-2. Save it to a temp file outside the checkout (`mktemp`) and run, from the PeerBridge checkout:
-   `bin/peerbridge-call --request-file <file> --message-id <id of the message you're answering>`
-3. Post the wrapper's output in the thread exactly as printed. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
+2. Save it to a temp file outside the checkout (`mktemp`) and run:
+   `/opt/peerbridge/bin/peerbridge-call --request-file <file> --message-id <id of the message you're answering>`
+   Use that exact path. It's the only command approved to reach Dev A's loopback. The copy in the checkout's `bin/` can't reach it.
+3. Post the wrapper's output in the thread once, exactly as printed. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
 4. If the status is 4xx or 5xx, add one line naming the field or rule in `sample/backend/app.py` that caused it, then stop and wait for Dev A.
 
 Never refuse a request yourself and never make HTTP calls any other way: no curl, no scripts, no other hosts. If the wrapper says REFUSED, post the refusal as it is and don't retry the request in another form.

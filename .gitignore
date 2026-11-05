@@ -7,3 +7,4 @@ __pycache__/
 .peerbridge/
 request*.json
 node_modules/
+peerbridge.env
