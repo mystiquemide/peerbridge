@@ -87,7 +87,7 @@ The wrapper tags every result with the room message id and sends a repeated mess
 
 PeerBridge runs on one Linux machine with two Switch users standing in for Dev A and Dev B. Each user gets their own agent controller and their own checkout.
 
-Requirements: Docker, Node 22.13+, Python 3.12+, [`uv`](https://docs.astral.sh/uv/), [`just`](https://just.systems), and the Codex CLI signed in.
+Requirements: Docker, Node 22.13+, Python 3.12+, `jq`, [`uv`](https://docs.astral.sh/uv/), [`just`](https://just.systems), and the Codex CLI.
 
 ### 1. Start Switch
 
@@ -114,33 +114,19 @@ just run
 
 Check it with `curl -s 127.0.0.1:8000/health`.
 
-### 2. Users, controllers, agents
+### 2. Set up PeerBridge
 
-1. As the gateway admin, create two users, Dev A and Dev B (see the `local-cloud-user` recipe in Switch's `justfile`).
-2. Install the controller from Switch's checkout (`console/packages/agent-controller`, see its README). Then, for each user, create an enrollment code (`POST /gateway/management/enrollment-codes`) and enroll a controller with its own data directory:
-   ```bash
-   switch-agent-controller enroll --server http://127.0.0.1:8000 --code <code> --name deva-box --data-dir ~/ctrl-deva --secret-store file
-   switch-agent-controller run --data-dir ~/ctrl-deva
-   ```
-   Repeat for Dev B with `devb-box` and `~/ctrl-devb`.
-3. Give each controller a Codex login. You can do this from Switch Console, or put an API key in the controller's `--env-file`.
-4. As Dev A, create managed agent `backend-agent` on `deva-box`, using provider `codex`, the instructions in `template/instructions/backend-agent.md`, and a directory containing a PeerBridge checkout. Then apply the addressing policy above.
-5. As Dev B, create `frontend-agent` on `devb-box` the same way, with its own checkout and `frontend-agent.md`. Create the agent before you clone into its directory, because the controller moves aside a directory it didn't create.
-6. As Dev A, create group chat `api-sync`, then add Dev B, backend-agent, and frontend-agent.
-
-### 3. Dev A's backend and wrapper
-
-From Dev A's checkout:
+Install `switch-agent-controller` from Switch's checkout (`console/packages/agent-controller`, see its README), plus `jq`. Then, from this repo:
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -r sample/backend/requirements.txt
-PATH=$PWD/.venv/bin:$PATH sample/backend/run.sh            # 127.0.0.1:8001
-sudo bin/install-wrapper.sh "$PWD/sample/backend/access.log" 8001
+SWITCH_DIR=~/switch OPENAI_API_KEY=<key> ./setup.sh
 ```
 
-Allow backend-agent's Codex sandbox to escalate exactly one command, `/opt/peerbridge/bin/peerbridge-call`.
+`setup.sh` creates Dev A and Dev B, enrolls and starts a controller for each, clones a checkout per developer, starts Dev A's backend on `127.0.0.1:8001`, installs the wrapper (it asks for `sudo`), creates both agents, creates `api-sync`, and applies both addressing policies. Passwords go to `~/peerbridge-demo/credentials.env`. It's safe to re-run: existing users, controllers, agents and the room are reused. Without `OPENAI_API_KEY`, give each controller a Codex login from Switch Console. Set `CODEX_MODEL` if your account needs a specific model.
 
-### 4. Try it
+Then allow backend-agent's Codex sandbox to escalate exactly one command, `/opt/peerbridge/bin/peerbridge-call`.
+
+### 3. Try it
 
 In `api-sync`, Dev A grants access once per session:
 
@@ -182,6 +168,7 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 ## Repo layout
 
 ```text
+setup.sh                       one-machine demo setup against Switch core
 bin/peerbridge-call            loopback-only request wrapper
 bin/install-wrapper.sh         root-owned install for sandboxed agents
 peerbridge.routes              route allowlist
@@ -190,3 +177,7 @@ sample/frontend/               Dev B's TypeScript checkout call
 template/instructions/         backend-agent and frontend-agent instructions
 tests/                         wrapper tests against the real backend
 ```
+
+## License
+
+[MIT](LICENSE)
