@@ -162,7 +162,8 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 | Dev B, a human not allowed by the policy, mentions backend-agent | Refused by Switch, no request reached the backend |
 | `DELETE /users` and `GET /admin/config` sent through the room | Refused by the wrapper, nothing sent |
 | `curl 127.0.0.1:8001` from inside the agent's sandbox | Fails. Only the wrapper gets through |
-| The same loop in a Mattermost-bridged room | Pass, 117 s |
+| The same loop in a Mattermost-bridged room | 2 of 2 runs, 60 s and 117 s |
+| A linked third user (Sam) mentions backend-agent from Mattermost | Refused by Switch, agent took no turn, no request reached the backend |
 | Commits or pushes during any run | None |
 
 ## Limitations
