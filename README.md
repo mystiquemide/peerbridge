@@ -1,8 +1,16 @@
 # PeerBridge
 
-Test your uncommitted frontend against a teammate's uncommitted backend, from a chat room, without anyone pushing a branch or opening a tunnel.
+**Ask my agent, not my laptop.**
 
-Two developers each run their own coding agent on their own machine. Dev B's agent reads Dev B's frontend code and asks Dev A's agent, in a shared [Switch](https://github.com/sandbox-quantum/switch) room, to run the request. Dev A's agent runs it against Dev A's own `127.0.0.1` and posts the real response. If it fails, Dev A says how to fix it in the thread, Dev A's agent edits Dev A's code, and the re-run comes back green.
+Your teammate's coding agent can ask yours to run a request against your machine, but only yours decides, only inside your team's [Switch](https://github.com/sandbox-quantum/switch) room, and only on `127.0.0.1`. Anyone else who tries gets refused by Switch before your agent even sees the message.
+
+That's how two developers test an uncommitted frontend against an uncommitted backend on two laptops, without pushing a branch, opening a tunnel, or handing over access.
+
+Three checks stand between the room and your machine, and the first one isn't ours:
+
+1. **Switch's addressing policy** decides who may address your agent at all: you anywhere, other agents only in this room, no other humans.
+2. **The agent's sandbox** has no network. Only one approved command can reach your loopback.
+3. **That command, `peerbridge-call`,** calls `127.0.0.1` only, on allowlisted routes, and refuses anything else without sending it.
 
 Built for Flip the Switch, Track 1: Best Business Workflow.
 
@@ -10,7 +18,7 @@ Built for Flip the Switch, Track 1: Best Business Workflow.
 
 A frontend change and a backend change are often built at the same time on two laptops. To find out whether they work together, someone pushes a work-in-progress branch, waits for a preview environment, or opens a tunnel and trades curl commands and tokens in chat. Mocks don't help, because the question is whether the real, unfinished code agrees.
 
-PeerBridge turns that into one message in the team room.
+With PeerBridge, Dev B asks their own agent in the room. That agent reads Dev B's code and asks Dev A's agent, which runs the request on Dev A's machine and posts the real response. If it fails, Dev A says how to fix it in the thread, Dev A's agent edits Dev A's code, and the re-run comes back green. Nothing is committed or pushed on either side.
 
 ## What happens in the room
 
@@ -75,13 +83,7 @@ flowchart LR
   FA <--> SW
 ```
 
-Three checks stand between the room and Dev A's machine:
-
-1. Switch's addressing policy decides who may address backend-agent at all.
-2. The coding agent's sandbox has no network. Only the root-owned wrapper at `/opt/peerbridge/bin/peerbridge-call` is approved to run outside it.
-3. The wrapper refuses non-loopback hosts, routes outside the allowlist, path tricks such as `//host`, `..`, and encoded characters, and it strips auth headers.
-
-The wrapper tags every result with the room message id and sends a repeated message id only once. Use `--rerun` to send it again after a code change.
+The wrapper is installed root-owned at `/opt/peerbridge/bin/peerbridge-call`, so the agent can run it but can't edit it. It refuses non-loopback hosts, routes outside the allowlist, path tricks such as `//host`, `..`, and encoded characters, and it strips auth headers. It tags every result with the room message id and sends a repeated message id only once. Use `--rerun` to send it again after a code change.
 
 ## Run it
 
