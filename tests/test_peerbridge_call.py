@@ -117,6 +117,13 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("valid JSON", out)
 
+    def test_refuses_header_with_line_break(self):
+        self.assert_refused_without_request(
+            {"method": "GET", "path": "/health", "headers": {"X": "a\r\nInjected: 1"}}, "aren't allowed")
+
+    def test_refuses_space_in_path(self):
+        self.assert_refused_without_request({"method": "GET", "path": "/health x"}, "spaces")
+
     def test_drops_auth_headers(self):
         code, out = self.call({"method": "GET", "path": "/health",
                                "headers": {"Authorization": "Bearer x", "X-Trace": "1"}})

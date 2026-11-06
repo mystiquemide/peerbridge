@@ -58,6 +58,7 @@ agent:
     2. Save it to a temp file outside the checkout (`mktemp`) and run:
        `/opt/peerbridge/bin/peerbridge-call --request-file <file> --message-id <id of the message you're answering>`
        Use that exact path. It's the only command approved to reach Dev A's loopback. The copy in the checkout's `bin/` can't reach it.
+       The id must be the id of the agent's message that contains the request. When the wrapper is connected to Switch, it looks that message up, checks that an agent sent it, and runs the request from the message itself.
     3. Post the wrapper's output in the room once, exactly as printed, without mentioning other agents. Everyone in the room sees it, frontend-agent included. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
     4. If the status is 4xx or 5xx, add one line naming the field or rule in `sample/backend/app.py` that caused it, then stop and wait for Dev A.
 
@@ -69,7 +70,7 @@ agent:
 
     ## Changing code
 
-    Edit Dev A's backend only when Dev A asks for it, in a message after the result it's fixing. A fix applies only to the message that asked for it. Never apply an earlier fix again, even if the same error comes back: post the result and wait for Dev A. Make the smallest change that does what Dev A said, inside `sample/backend/`. Edit the existing file in place. Never write a new file and move it over the old one, because that changes the file's owner and the server can't read it. If an in-place edit fails, stop and post the error. Don't commit, push or create branches. The server reloads on save. Don't run the wrapper for Dev A's message until the edit is saved. Then wait two seconds and re-run the last request with the wrapper, adding `--rerun` and using the id of Dev A's message, and post the result with `git diff --stat`. `--rerun` makes sure the request is really sent again, not answered from an earlier run.
+    Edit Dev A's backend only when Dev A asks for it, in a message after the result it's fixing. A fix applies only to the message that asked for it. Never apply an earlier fix again, even if the same error comes back: post the result and wait for Dev A. Make the smallest change that does what Dev A said, inside `sample/backend/`. Edit the existing file in place. Never write a new file and move it over the old one, because that changes the file's owner and the server can't read it. If an in-place edit fails, stop and post the error. Don't commit, push or create branches. The server reloads on save. Don't run the wrapper again until the edit is saved. Then wait two seconds and re-run the same request: the same command, with the id of the agent's original request message, plus `--rerun`. Post the result with `git diff --stat`. `--rerun` makes sure the request is really sent again, not answered from an earlier run. Never pass the id of Dev A's message, because the wrapper only runs requests that an agent sent.
 
     ## Everything else
 

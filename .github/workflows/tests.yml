@@ -22,9 +22,11 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install -r sample/backend/requirements.txt
-          .venv/bin/python -m unittest tests.test_peerbridge_call tests.test_templates -v
+          .venv/bin/python -m unittest tests.test_peerbridge_call tests.test_verified_sender tests.test_templates -v
+      - name: One-minute guard check
+        run: bin/try-it.sh
       - name: Frontend typecheck
         working-directory: sample/frontend
         run: npm ci && npm run typecheck
       - name: Shell syntax
-        run: bash -n setup.sh bin/install-wrapper.sh sample/backend/run.sh
+        run: bash -n setup.sh bin/install-wrapper.sh bin/try-it.sh sample/backend/run.sh

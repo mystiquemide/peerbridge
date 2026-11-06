@@ -75,11 +75,14 @@ login() {
 
 step "Users"
 login admin "$(env_value GATEWAY_ADMIN_EMAIL)" "$(env_value GATEWAY_ADMIN_PASSWORD)"
-for who in deva devb; do
+# The verifier is a read-only member of api-sync. The wrapper signs in as it to
+# check who sent each request. Anything it posted would count as a person's
+# message, which the wrapper refuses, so its password grants no way around the check.
+for who in deva devb verifier; do
   var="${who^^}_PASSWORD"
   if [ -z "${!var:-}" ]; then
     pass="$(openssl rand -base64 24 | tr -d '/+=')Aa1!"
-    name=$([ "$who" = deva ] && echo "Dev A" || echo "Dev B")
+    case "$who" in deva) name="Dev A" ;; devb) name="Dev B" ;; *) name="PeerBridge verifier" ;; esac
     api "$WORK/jars/admin" POST /users \
       "$(jq -n --arg e "$who@$DOMAIN" --arg n "$name" --arg p "$pass" '{email:$e,name:$n,password:$p}')" >/dev/null
     echo "$var=$pass" >> "$CREDS"
@@ -91,6 +94,8 @@ for who in deva devb; do
   login "$who" "$who@$DOMAIN" "${!var}"
 done
 DEVB_ID=$(api "$WORK/jars/devb" GET /auth/me | jq -r '.id // .user.id')
+VERIFIER_ID=$(api "$WORK/jars/verifier" GET /auth/me | jq -r '.id // .user.id')
+printf '%s\n' "$VERIFIER_PASSWORD" > "$WORK/verifier.password"
 
 step "Controllers"
 ENV_FILE="$WORK/controller.env"
@@ -145,14 +150,6 @@ if ! curl -fsS "127.0.0.1:$BACKEND_PORT/health" >/dev/null 2>&1; then
 fi
 curl -fsS "127.0.0.1:$BACKEND_PORT/health" >/dev/null || { echo "backend didn't start, see $WORK/logs/backend.log" >&2; exit 1; }
 echo "backend on 127.0.0.1:$BACKEND_PORT"
-SUDO=$([ "$(id -u)" -eq 0 ] && echo "" || echo sudo)
-WANT_LOG="PEERBRIDGE_ACCESS_LOG=$DEVA_REPO/sample/backend/access.log"
-if [ -f /opt/peerbridge/peerbridge.env ] && ! grep -qxF "$WANT_LOG" /opt/peerbridge/peerbridge.env && [ "${FORCE_WRAPPER:-}" != 1 ]; then
-  echo "/opt/peerbridge is installed for another setup. Re-run with FORCE_WRAPPER=1 to replace it." >&2
-  exit 1
-fi
-$SUDO "$DEVA_REPO/bin/install-wrapper.sh" "$DEVA_REPO/sample/backend/access.log" "$BACKEND_PORT"
-
 step "Agents"
 make_agent() { # owner name controller instructions-file directory
   local existing ins
@@ -185,7 +182,21 @@ api "$WORK/jars/devb" PUT "/agents/$FRONTEND_AGENT/addressing-policy" "$(jq -n -
   '{policy:{rules:[{owner:true,users:[],agents:[]},{rooms:[$r],users:"*",agents:[]}]}}')" >/dev/null
 api "$WORK/jars/deva" POST "/chats/$ROOM/agents" "$(jq -n --arg a "$FRONTEND_AGENT" '{agentId:$a}')" >/dev/null 2>&1 \
   || echo "frontend-agent already in api-sync"
+api "$WORK/jars/deva" POST "/chats/$ROOM/members" "$(jq -n --arg u "$VERIFIER_ID" '{userId:$u}')" >/dev/null 2>&1 \
+  || echo "verifier already in api-sync"
 echo "api-sync $ROOM ready"
+
+step "Wrapper"
+SUDO=$([ "$(id -u)" -eq 0 ] && echo "" || echo sudo)
+WANT_LOG="PEERBRIDGE_ACCESS_LOG=$DEVA_REPO/sample/backend/access.log"
+if [ -f /opt/peerbridge/peerbridge.env ] && ! grep -qxF "$WANT_LOG" /opt/peerbridge/peerbridge.env && [ "${FORCE_WRAPPER:-}" != 1 ]; then
+  echo "/opt/peerbridge is installed for another setup. Re-run with FORCE_WRAPPER=1 to replace it." >&2
+  exit 1
+fi
+$SUDO env PEERBRIDGE_SWITCH_URL="$SWITCH_URL" PEERBRIDGE_ROOM_ID="$ROOM" PEERBRIDGE_AGENT_ID="$BACKEND_AGENT" \
+  PEERBRIDGE_VERIFIER_EMAIL="verifier@$DOMAIN" PEERBRIDGE_VERIFIER_PASSWORD_FILE="$WORK/verifier.password" \
+  "$DEVA_REPO/bin/install-wrapper.sh" "$DEVA_REPO/sample/backend/access.log" "$BACKEND_PORT"
+
 
 cat <<DONE
 

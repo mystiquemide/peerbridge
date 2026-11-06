@@ -14,9 +14,16 @@ Three checks stand between the room and your machine, and the first one isn't ou
 
 1. **Switch's addressing policy** decides who may address your agent at all: you anywhere, other agents only in this room, no other humans.
 2. **The agent's sandbox** has no network. Only one approved command can reach your loopback.
-3. **That command, `peerbridge-call`,** calls `127.0.0.1` only, on allowlisted routes, and refuses anything else without sending it.
+3. **That command, `peerbridge-call`,** calls `127.0.0.1` only, on allowlisted routes, and refuses anything else without sending it. Connected to Switch, it also looks up the room message behind each request and runs it only if another agent in the room sent it.
 
 Built for Flip the Switch, Track 1: Best Business Workflow.
+
+## For judges
+
+- **Watch it (1:46):** the video above, recorded in Mattermost with two developers, a third teammate and two agents.
+- **Check the guard yourself in under a minute, with no Switch:** run `python3 -m venv .venv && .venv/bin/pip install -r sample/backend/requirements.txt && bin/try-it.sh`. It starts a throwaway copy of Dev A's backend and sends it what the agents would, through the real wrapper: a real 422, two refusals, Dev A's fix, then a real 200, with the access log as proof.
+- **See how Switch carries it:** [How Switch makes this work](#how-switch-makes-this-work).
+- **See what was proven, and what wasn't:** [Evidence](#evidence-from-real-runs) and [Limitations](#limitations).
 
 ## The problem
 
@@ -100,6 +107,8 @@ flowchart LR
 
 The wrapper is installed root-owned at `/opt/peerbridge/bin/peerbridge-call`, so the agent can run it but can't edit it. It refuses non-loopback hosts, routes outside the allowlist, path tricks such as `//host`, `..`, and encoded characters, and it strips auth headers. It tags every result with the room message id and sends a repeated message id only once. Use `--rerun` to send it again after a code change.
 
+With `PEERBRIDGE_SWITCH_URL` set, which `setup.sh` does, the wrapper doesn't trust the request it's handed. It signs in to Switch as a read-only verifier account, finds the message by its id in `api-sync` or one of its threads, and refuses unless that message came from an agent other than backend-agent, mentions backend-agent, and was sent in the last 15 minutes. It then runs the JSON block from that message, not anything the agent passed in. So backend-agent can't run a person's message, a refused one, an old one, or a payload it made up. The verifier's password is readable by the agent, but that gets it nowhere: anything the verifier posts is a person's message, which the wrapper refuses.
+
 ## Run it
 
 There are three steps: start Switch, run `setup.sh`, then post one message in the room.
@@ -175,11 +184,11 @@ Connecting Mattermost also brings its default channels, Town Square and Off-Topi
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r sample/backend/requirements.txt
-.venv/bin/python -m unittest tests.test_peerbridge_call tests.test_templates -v
+.venv/bin/python -m unittest tests.test_peerbridge_call tests.test_verified_sender tests.test_templates -v
 cd sample/frontend && npm install && npm run typecheck
 ```
 
-CI runs the same checks on every push. The tests check that the templates match the instructions. The 16 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning.
+CI runs the same checks on every push. The tests check that the templates match the instructions. The 18 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning. The 13 sender-check tests run the wrapper against a fake Switch server: an agent's request runs, and a person's, backend-agent's own, an unaddressed, a stale and an unknown message are all refused before anything is sent.
 
 ## Evidence from real runs
 
@@ -199,8 +208,8 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 
 ## Limitations
 
-- Switch refuses to deliver a message from someone outside the policy, but the agent can still read that message in the room's history. In one test run, a grant from Dev A opened a turn, and backend-agent found Sam's earlier, refused request there and ran it. Its instructions now say to act only on requests an agent sent it, and a re-test confirmed it no longer runs Sam's request. That rule is an instruction, not a hard check.
-- In the recorded demo, backend-agent tagged its 422 with the id of an earlier message instead of frontend-agent's request. The request itself was real and is in the access log. The `[re: …]` tag is only as accurate as the id the agent passes in.
+- Switch refuses to deliver a message from someone outside the policy, but the agent can still read that message in the room's history. In one test run, a grant from Dev A opened a turn, and backend-agent found Sam's earlier, refused request there and ran it. Two fixes followed. Its instructions now say to act only on requests an agent sent it, and a re-test confirmed it. The wrapper now checks the sender in Switch itself, so a person's request is refused even if the agent ignores its instructions. That check is covered by tests against a fake Switch server. It hasn't yet been run against the live demo setup.
+- In the recorded demo, backend-agent tagged its 422 with the id of an earlier message instead of frontend-agent's request. The request itself was real and is in the access log. The video predates the sender check, which would have refused that id.
 - Switch's addressing policy, the sandbox and the wrapper are enforced. "Edit Dev A's code only when Dev A asks" is an instruction to the agent, not a hard check. In testing, backend-agent once re-applied an earlier fix without a new request, after old room messages were delivered late. Dev A's `git diff` shows every change, and nothing is ever committed.
 - Both "machines" are one host with two Switch users. That's for reproducibility. The design doesn't depend on it.
 - The coding agent decides when to escalate the wrapper call. Codex's own reviewer may ask for Dev A's approval on requests that look like purchases, which is why Dev A grants access in the room.
@@ -220,7 +229,8 @@ sample/frontend/               Dev B's TypeScript checkout call
 template/*.template.yaml       Switch templates, one per owner
 template/instructions/         backend-agent and frontend-agent instructions
 bin/build-templates.py         rebuilds the templates from the instructions
-tests/                         wrapper tests against the real backend
+bin/try-it.sh                  the guard in one minute, no Switch needed
+tests/                         wrapper tests against the real backend and a fake Switch
 ```
 
 ## License
