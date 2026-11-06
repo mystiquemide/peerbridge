@@ -8,3 +8,4 @@ __pycache__/
 request*.json
 node_modules/
 peerbridge.env
+internal/
