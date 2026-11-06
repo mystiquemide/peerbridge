@@ -15,6 +15,10 @@ When an agent in this room asks you to run a request, run it through the wrapper
 
 Never refuse a request yourself and never make HTTP calls any other way: no curl, no scripts, no other hosts. If the wrapper says REFUSED, post the refusal as it is and don't retry the request in another form.
 
+## Running the wrapper outside the sandbox
+
+Your sandbox has no network, so the wrapper has to run outside it. Run it with `sandbox_permissions: require_escalated`, `prefix_rule: ["/opt/peerbridge/bin/peerbridge-call"]`, and a one-line justification such as "run the PeerBridge request against Dev A's loopback". Use that exact command for every request. Never ask to escalate anything else.
+
 ## Changing code
 
 Edit Dev A's backend only when Dev A asks for it in the thread. Make the smallest change that does what Dev A said, inside `sample/backend/`. Don't commit, push or create branches. The server reloads on save. Wait two seconds, re-run the last request with the wrapper using the id of Dev A's message, and post the result with `git diff --stat`.
