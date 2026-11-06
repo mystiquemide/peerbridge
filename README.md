@@ -60,7 +60,7 @@ Without Switch, the two agents have no shared channel and nothing stops a third 
 | Managed agents | Each agent's provider, model, instructions, and working directory are set in Switch and pushed to its controller. |
 | Templates | [`peerbridge-backend.template.yaml`](template/peerbridge-backend.template.yaml) creates backend-agent and `api-sync` for Dev A. [`peerbridge-frontend.template.yaml`](template/peerbridge-frontend.template.yaml) creates frontend-agent for Dev B. There's one per owner, because a template's agents belong to whoever deploys it. |
 
-`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The same loop also ran in a room bridged to Mattermost, with the humans posting in Mattermost and both agents appearing as Mattermost bot users. The backend template's `bridge` parameter puts `api-sync` on a messaging app the server has set up. Slack and Discord weren't tested.
+`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The same loop also ran in a room bridged to Mattermost, with the humans posting in Mattermost and both agents appearing as Mattermost bot users. See [Run it in Mattermost](#4-optional-run-it-in-mattermost). The backend template's `bridge` parameter puts `api-sync` on a messaging app the server has set up. Slack and Discord weren't tested.
 
 backend-agent's addressing policy:
 
@@ -152,6 +152,22 @@ In `api-sync`, Dev A grants access once per session:
 > @backend-agent you can run allowlisted requests from agents in this room against my local backend for this session.
 
 Then Dev B posts `@frontend-agent check POST /v2/checkout against Dev A`.
+
+### 4. Optional: run it in Mattermost
+
+This is how the demo video was recorded. Humans post in Mattermost, and each agent shows up there as its own bot user. Switch enforces the same addressing policy, and Mattermost users who aren't linked to a Switch account get refused.
+
+1. **Start Mattermost** from Switch's local stack. It listens on `127.0.0.1:8065`, and bot account creation is already on in that compose file:
+   ```bash
+   docker compose -f deploy/local/docker-compose.yml --project-directory . up -d mattermost
+   ```
+   Create an admin account and a team in Mattermost.
+2. **Connect it to Switch** as a messaging app, either from Switch Console (**Home**, then **Messaging apps**) or with `POST /gateway/collaborations` as the Switch admin. The connection needs `url`, `admin_user`, `admin_password` and `team_name`. Use `http://localhost:8065`, not `127.0.0.1`: Switch refuses private addresses unless they're listed in `OUTBOUND_ALLOWED_PRIVATE_HOSTS`, and its default only lists `localhost`. See Switch's [Mattermost guide](https://docs.switchagents.ai/flintai/switch/deploy/messaging-apps/mattermost).
+3. **Link each person.** Create a Mattermost user for Dev A and Dev B. Each Switch user claims their Mattermost account (`POST /gateway/collaborations/{bridge_id}/identities`), gets a one-time code (`.../identities/{id}/code`), and posts `!link-account <code>` from a Mattermost channel that has a Switch agent in it. Addressing policies work with Switch users, so an account has to be linked before Switch will let it address an agent.
+4. **Create the room on the bridge** with `POST /gateway/rooms`, passing the bridge id, `channel_type: channel_private`, both agents and Dev B. `POST /gateway/chats` won't do here, because a bridged chat takes only one agent. Then add the Mattermost users to the channel.
+5. **Apply the policies for the new room.** Add a rule for this room id to both agents, and keep their existing rules. backend-agent gets `{"rooms":["<room id>"],"users":[],"agents":"*"}` and frontend-agent gets `{"rooms":["<room id>"],"users":"*","agents":[]}`.
+
+Connecting Mattermost also brings its default channels, Town Square and Off-Topic, into Switch as rooms. The agents aren't in them, so you can ignore them.
 
 ### Tests
 
