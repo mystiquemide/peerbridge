@@ -50,7 +50,7 @@ Without Switch, the two agents have no shared channel and nothing stops a third 
 | Managed agents | Each agent's provider, model, instructions, and working directory are set in Switch and pushed to its controller. |
 | Templates | [`peerbridge-backend.template.yaml`](template/peerbridge-backend.template.yaml) creates backend-agent and `api-sync` for Dev A. [`peerbridge-frontend.template.yaml`](template/peerbridge-frontend.template.yaml) creates frontend-agent for Dev B. There's one per owner, because a template's agents belong to whoever deploys it. |
 
-`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The addressing policy and agent mentions work the same in a bridged room. The backend template's `bridge` parameter puts `api-sync` in Mattermost, Slack or Discord when one is set up on the server.
+`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The backend template's `bridge` parameter can put `api-sync` in Mattermost, Slack or Discord when one is set up on the server. We haven't tested PeerBridge in a bridged room.
 
 backend-agent's addressing policy:
 
