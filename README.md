@@ -151,7 +151,7 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 |---|---|
 | backend-agent posts a real 422 in the room, and the line matches the access log | 3 of 3 runs |
 | frontend-agent's payload follows Dev B's code (quantity changed to 3, payload showed 3) | Pass |
-| Full loop: request, then 422, then fix in thread, then 200 | 62 to 90 s per loop |
+| Full loop: request, then 422, then fix in thread, then 200 | 62 to 131 s across 6 runs, most around 70 s |
 | Dev B, a human not allowed by the policy, mentions backend-agent | Refused by Switch, no request reached the backend |
 | `DELETE /users` and `GET /admin/config` sent through the room | Refused by the wrapper, nothing sent |
 | `curl 127.0.0.1:8001` from inside the agent's sandbox | Fails. Only the wrapper gets through |
