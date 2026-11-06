@@ -48,6 +48,7 @@ Without Switch, the two agents have no shared channel and nothing stops a third 
 | Addressing policies | backend-agent answers its owner anywhere and agents only inside `api-sync`. Any other human is refused by Switch itself, before the agent sees the message. |
 | Agent controllers (`switch-agent-controller`) | Each developer's agent runs headless on that developer's machine, under their own Switch account. |
 | Managed agents | Each agent's provider, model, instructions, and working directory are set in Switch and pushed to its controller. |
+| Templates | [`peerbridge-backend.template.yaml`](template/peerbridge-backend.template.yaml) creates backend-agent and `api-sync` for Dev A. [`peerbridge-frontend.template.yaml`](template/peerbridge-frontend.template.yaml) creates frontend-agent for Dev B. There's one per owner, because a template's agents belong to whoever deploys it. |
 
 backend-agent's addressing policy:
 
@@ -58,7 +59,7 @@ backend-agent's addressing policy:
 ]}}
 ```
 
-Set `users` and `agents` explicitly in every rule. A dimension you leave out means "anyone", so `{"owner":true}` on its own admits everybody.
+Template `addressing` only offers `owner`, `owner-agents` and `anyone`, so this room-scoped rule is applied after deploying, by `setup.sh` or one API call. Set `users` and `agents` explicitly in every rule. A dimension you leave out means "anyone", so `{"owner":true}` on its own admits everybody.
 
 ## Agents and guards
 
@@ -126,6 +127,8 @@ SWITCH_DIR=~/switch OPENAI_API_KEY=<key> ./setup.sh
 
 `setup.sh` creates Dev A and Dev B, enrolls and starts a controller for each, clones a checkout per developer, starts Dev A's backend on `127.0.0.1:8001`, installs the wrapper (it asks for `sudo`), creates both agents, creates `api-sync`, and applies both addressing policies. Passwords go to `~/peerbridge-demo/credentials.env`. It's safe to re-run: existing users, controllers, agents and the room are reused. Without `OPENAI_API_KEY`, give each controller a Codex login from Switch Console. Set `CODEX_MODEL` if your account needs a specific model.
 
+To deploy from Switch Console instead, Dev A uses `peerbridge-backend.template.yaml` and Dev B uses `peerbridge-frontend.template.yaml`. The steps after deploying are in each file's header.
+
 Then allow backend-agent's Codex sandbox to escalate exactly one command, `/opt/peerbridge/bin/peerbridge-call`.
 
 ### 3. Try it
@@ -139,11 +142,11 @@ Then Dev B posts `@frontend-agent check POST /v2/checkout against Dev A`.
 ### Tests
 
 ```bash
-.venv/bin/python -m unittest tests.test_peerbridge_call -v
+.venv/bin/python -m unittest tests.test_peerbridge_call tests.test_templates -v
 cd sample/frontend && npm install && npm run typecheck
 ```
 
-The 16 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning.
+The tests check that the templates match the instructions. The 16 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning.
 
 ## Evidence from real runs
 
@@ -177,7 +180,9 @@ bin/install-wrapper.sh         root-owned install for sandboxed agents
 peerbridge.routes              route allowlist
 sample/backend/                Dev A's FastAPI service
 sample/frontend/               Dev B's TypeScript checkout call
+template/*.template.yaml       Switch templates, one per owner
 template/instructions/         backend-agent and frontend-agent instructions
+bin/build-templates.py         rebuilds the templates from the instructions
 tests/                         wrapper tests against the real backend
 ```
 
