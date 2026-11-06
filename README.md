@@ -73,7 +73,7 @@ backend-agent's addressing policy:
 ]}}
 ```
 
-Template `addressing` only offers `owner`, `owner-agents` and `anyone`, so this room-scoped rule is applied after deploying, by `setup.sh` or one API call. Set `users` and `agents` explicitly in every rule. A dimension you leave out means "anyone", so `{"owner":true}` on its own admits everybody.
+Template `addressing` can't express "agents in this room, but no other humans": `owner`, `owner-agents` and `anyone` aren't room-scoped, and version 2's `anyone_in` admits every human in the room too. So this rule is applied after deploying, by `setup.sh` or one API call. Set `users` and `agents` explicitly in every rule. A dimension you leave out means "anyone", so `{"owner":true}` on its own admits everybody.
 
 ## Agents and guards
 
