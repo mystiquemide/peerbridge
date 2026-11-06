@@ -17,6 +17,9 @@
 #   CONTROLLER_BIN   switch-agent-controller command (default switch-agent-controller)
 #   BACKEND_PORT     Dev A's backend port (default 8001)
 #   EMAIL_DOMAIN     domain for the two accounts (default switch.local)
+#   AGENT_PREFIX     prefix for the agent names, which are unique across the whole
+#                    Switch server (default none: backend-agent, frontend-agent)
+#   FORCE_WRAPPER=1  replace an existing /opt/peerbridge install that points elsewhere
 set -euo pipefail
 
 : "${SWITCH_DIR:?set SWITCH_DIR to your Switch checkout}"
@@ -25,6 +28,8 @@ WORK="${PEERBRIDGE_WORK:-$HOME/peerbridge-demo}"
 CONTROLLER_BIN="${CONTROLLER_BIN:-switch-agent-controller}"
 BACKEND_PORT="${BACKEND_PORT:-8001}"
 DOMAIN="${EMAIL_DOMAIN:-switch.local}"
+BACKEND_NAME="${AGENT_PREFIX:-}backend-agent"
+FRONTEND_NAME="${AGENT_PREFIX:-}frontend-agent"
 REPO="$(cd "$(dirname "$0")" && pwd)"
 API="$SWITCH_URL/gateway"
 
@@ -44,6 +49,7 @@ CREDS="$WORK/credentials.env"
 . "$CREDS"
 
 step() { printf '\n== %s\n' "$*"; }
+trap 'echo "setup.sh stopped. Anything it started is listed in $WORK/*.pid. Stop it with: kill \$(cat $WORK/*.pid)" >&2' ERR
 env_value() { grep -E "^$1=" "$SWITCH_DIR/.env" | tail -1 | cut -d= -f2-; }
 
 # api <jar> <method> <path> [json body] prints the body and fails on a non-2xx status.
@@ -128,29 +134,42 @@ DEVA_REPO="$WORK/deva/peerbridge"
 [ -x "$DEVA_REPO/.venv/bin/python" ] || python3 -m venv "$DEVA_REPO/.venv"
 "$DEVA_REPO/.venv/bin/pip" install -q -r "$DEVA_REPO/sample/backend/requirements.txt"
 if ! curl -fsS "127.0.0.1:$BACKEND_PORT/health" >/dev/null 2>&1; then
-  ( cd "$DEVA_REPO" && umask 002 && PATH="$DEVA_REPO/.venv/bin:$PATH" PEERBRIDGE_BACKEND_PORT="$BACKEND_PORT" \
-    nohup sample/backend/run.sh >> "$WORK/logs/backend.log" 2>&1 & echo $! > "$WORK/backend.pid" )
+  (
+    cd "$DEVA_REPO"
+    umask 002
+    PATH="$DEVA_REPO/.venv/bin:$PATH" PEERBRIDGE_BACKEND_PORT="$BACKEND_PORT" \
+      nohup sample/backend/run.sh >> "$WORK/logs/backend.log" 2>&1 &
+    echo $! > "$WORK/backend.pid"
+  )
   for _ in $(seq 30); do curl -fsS "127.0.0.1:$BACKEND_PORT/health" >/dev/null 2>&1 && break; sleep 0.5; done
 fi
 curl -fsS "127.0.0.1:$BACKEND_PORT/health" >/dev/null || { echo "backend didn't start, see $WORK/logs/backend.log" >&2; exit 1; }
 echo "backend on 127.0.0.1:$BACKEND_PORT"
 SUDO=$([ "$(id -u)" -eq 0 ] && echo "" || echo sudo)
+WANT_LOG="PEERBRIDGE_ACCESS_LOG=$DEVA_REPO/sample/backend/access.log"
+if [ -f /opt/peerbridge/peerbridge.env ] && ! grep -qxF "$WANT_LOG" /opt/peerbridge/peerbridge.env && [ "${FORCE_WRAPPER:-}" != 1 ]; then
+  echo "/opt/peerbridge is installed for another setup. Re-run with FORCE_WRAPPER=1 to replace it." >&2
+  exit 1
+fi
 $SUDO "$DEVA_REPO/bin/install-wrapper.sh" "$DEVA_REPO/sample/backend/access.log" "$BACKEND_PORT"
 
 step "Agents"
 make_agent() { # owner name controller instructions-file directory
-  local existing
+  local existing ins
   existing=$(api "$WORK/jars/$1" GET /management/agents | jq -r --arg n "$2" '[.[] | select(.name==$n)][0].agent_id // empty')
   if [ -n "$existing" ]; then echo "$existing"; return; fi
+  # The instructions mention the agents by their default names.
+  ins=$(sed -e "s/@backend-agent/@$BACKEND_NAME/g; s/@frontend-agent/@$FRONTEND_NAME/g" "$4")
   api "$WORK/jars/$1" POST /management/agents "$(jq -n \
-    --arg name "$2" --arg ctrl "$3" --rawfile ins "$4" --arg dir "$5" --arg model "${CODEX_MODEL:-}" \
+    --arg name "$2" --arg ctrl "$3" --arg ins "$ins" --arg dir "$5" --arg model "${CODEX_MODEL:-}" \
     '{name:$name, description:"PeerBridge \($name)", controller_id:$ctrl, desired_state:"running",
       definition:({provider:"codex", instructions:$ins, directory:$dir}
-                  + (if $model == "" then {} else {model:$model} end))}')" | jq -r .agent_id
+                  + (if $model == "" then {} else {model:$model} end))}')" | jq -r .agent_id \
+    || { echo "Couldn't create $2. Agent names are unique across the Switch server: if another account already has one, set AGENT_PREFIX." >&2; return 1; }
 }
-BACKEND_AGENT=$(make_agent deva backend-agent "$DEVA_CTRL" "$DEVA_REPO/template/instructions/backend-agent.md" "$DEVA_REPO")
-FRONTEND_AGENT=$(make_agent devb frontend-agent "$DEVB_CTRL" "$WORK/devb/peerbridge/template/instructions/frontend-agent.md" "$WORK/devb/peerbridge")
-echo "backend-agent $BACKEND_AGENT, frontend-agent $FRONTEND_AGENT"
+BACKEND_AGENT=$(make_agent deva "$BACKEND_NAME" "$DEVA_CTRL" "$DEVA_REPO/template/instructions/backend-agent.md" "$DEVA_REPO")
+FRONTEND_AGENT=$(make_agent devb "$FRONTEND_NAME" "$DEVB_CTRL" "$WORK/devb/peerbridge/template/instructions/frontend-agent.md" "$WORK/devb/peerbridge")
+echo "$BACKEND_NAME $BACKEND_AGENT, $FRONTEND_NAME $FRONTEND_AGENT"
 
 step "Room and addressing"
 ROOM=$(api "$WORK/jars/deva" GET /chats | jq -r '[.chats[] | select(.name=="api-sync")][0].roomId // empty')
@@ -173,9 +192,9 @@ cat <<DONE
 PeerBridge is set up. Sign in to Switch as Dev A and Dev B (passwords in $CREDS).
 In api-sync:
   1. Dev A grants access once:
-     @backend-agent you can run allowlisted requests from agents in this room against my local backend for this session.
+     @$BACKEND_NAME you can run allowlisted requests from agents in this room against my local backend for this session.
   2. Dev B asks:
-     @frontend-agent check POST /v2/checkout against Dev A
+     @$FRONTEND_NAME check POST /v2/checkout against Dev A
 $([ -z "${OPENAI_API_KEY:-}" ] && echo "No OPENAI_API_KEY was set: give deva-box and devb-box a Codex login from Switch Console first.")
 Allow backend-agent's Codex sandbox to escalate exactly /opt/peerbridge/bin/peerbridge-call.
 Stop everything with: kill \$(cat $WORK/*.pid)

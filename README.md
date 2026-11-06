@@ -159,6 +159,7 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 
 ## Limitations
 
+- Switch's addressing policy, the sandbox and the wrapper are enforced. "Edit Dev A's code only when Dev A asks" is an instruction to the agent, not a hard check. In testing, backend-agent once re-applied an earlier fix without a new request, after old room messages were delivered late. Dev A's `git diff` shows every change, and nothing is ever committed.
 - Both "machines" are one host with two Switch users. That's for reproducibility. The design doesn't depend on it.
 - The coding agent decides when to escalate the wrapper call. Codex's own reviewer may ask for Dev A's approval on requests that look like purchases, which is why Dev A grants access in the room.
 - On Ubuntu 23.10 and later, AppArmor's `apparmor_restrict_unprivileged_userns` can stop Codex's sandbox from starting. A profile scoped to Codex's `bwrap` binary fixes it.
