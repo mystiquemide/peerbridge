@@ -22,6 +22,14 @@ A frontend change and a backend change are often built at the same time on two l
 
 With PeerBridge, Dev B asks their own agent in the room. That agent reads Dev B's code and asks Dev A's agent, which runs the request on Dev A's machine and posts the real response. If it fails, Dev A says how to fix it in the thread, Dev A's agent edits Dev A's code, and the re-run comes back green. Nothing is committed or pushed on either side.
 
+## Why not a tunnel, a mock, or a preview environment?
+
+| Today | The catch | PeerBridge |
+|---|---|---|
+| Tunnel to your laptop | Anyone with the URL can reach your machine | Only agents in your room can ask, and Switch refuses everyone else |
+| Mock the backend | You test against a guess, not the real code | The request hits Dev A's real, unfinished code |
+| Push a WIP branch, wait for a preview | Half-finished code gets pushed, and someone waits | Nothing is committed or pushed |
+
 ## What happens in the room
 
 ```text
@@ -91,6 +99,8 @@ flowchart LR
 The wrapper is installed root-owned at `/opt/peerbridge/bin/peerbridge-call`, so the agent can run it but can't edit it. It refuses non-loopback hosts, routes outside the allowlist, path tricks such as `//host`, `..`, and encoded characters, and it strips auth headers. It tags every result with the room message id and sends a repeated message id only once. Use `--rerun` to send it again after a code change.
 
 ## Run it
+
+There are three steps: start Switch, run `setup.sh`, then post one message in the room.
 
 PeerBridge runs on one Linux machine with two Switch users standing in for Dev A and Dev B. Each user gets their own agent controller and their own checkout.
 
