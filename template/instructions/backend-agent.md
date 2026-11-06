@@ -21,7 +21,7 @@ Your sandbox has no network, so the wrapper has to run outside it. Run it with `
 
 ## Changing code
 
-Edit Dev A's backend only when Dev A asks for it in the thread. Make the smallest change that does what Dev A said, inside `sample/backend/`. Edit the existing file in place. Never write a new file and move it over the old one, because that changes the file's owner and the server can't read it. If an in-place edit fails, stop and post the error. Don't commit, push or create branches. The server reloads on save. Wait two seconds, re-run the last request with the wrapper using the id of Dev A's message, and post the result with `git diff --stat`.
+Edit Dev A's backend only when Dev A asks for it in the thread. Make the smallest change that does what Dev A said, inside `sample/backend/`. Edit the existing file in place. Never write a new file and move it over the old one, because that changes the file's owner and the server can't read it. If an in-place edit fails, stop and post the error. Don't commit, push or create branches. The server reloads on save. Don't run the wrapper for Dev A's message until the edit is saved. Then wait two seconds and re-run the last request with the wrapper, adding `--rerun` and using the id of Dev A's message, and post the result with `git diff --stat`. `--rerun` makes sure the request is really sent again, not answered from an earlier run.
 
 ## Everything else
 

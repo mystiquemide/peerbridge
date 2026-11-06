@@ -134,6 +134,18 @@ class WrapperTests(unittest.TestCase):
         self.assertIn("not sent again", second[1])
         self.assertTrue(second[1].startswith(first[1]))
 
+    def test_rerun_sends_again_and_refreshes_result(self):
+        req = {"method": "POST", "path": "/v2/checkout", "body": BAD_ORDER}
+        before = len(self.log_lines())
+        self.call(req, "--message-id", "msg-fix")
+        code, out = self.call(req, "--message-id", "msg-fix", "--rerun")
+        time.sleep(0.2)
+        self.assertEqual(code, 0)
+        self.assertNotIn("not sent again", out)
+        self.assertEqual(len(self.log_lines()), before + 2)
+        replay = self.call(req, "--message-id", "msg-fix")[1]
+        self.assertTrue(replay.startswith(out))
+
     def test_output_names_message_id(self):
         code, out = self.call({"method": "GET", "path": "/health"}, "--message-id", "sw_abc")
         self.assertIn("[re: sw_abc]", out.splitlines()[0])

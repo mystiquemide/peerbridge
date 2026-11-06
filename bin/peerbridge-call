@@ -140,6 +140,8 @@ def run(argv: list[str], stdin) -> tuple[int, str]:
     parser = argparse.ArgumentParser(prog="peerbridge-call", description=__doc__.splitlines()[0])
     parser.add_argument("--request-file", help="JSON request file. Reads stdin when omitted.")
     parser.add_argument("--message-id", help="Room message id. A repeat id returns the first result without re-sending.")
+    parser.add_argument("--rerun", action="store_true",
+                        help="Send even if this message id already ran, and replace its stored result. Use after a code change.")
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args(argv)
 
@@ -153,7 +155,7 @@ def run(argv: list[str], stdin) -> tuple[int, str]:
     cached = None
     if args.message_id:
         cached = state / (hashlib.sha256(args.message_id.encode()).hexdigest()[:32] + ".txt")
-        if cached.exists():
+        if cached.exists() and not args.rerun:
             return 0, cached.read_text(encoding="utf-8") + "\n(already ran for this message, not sent again)"
 
     try:
