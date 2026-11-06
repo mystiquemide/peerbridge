@@ -31,6 +31,9 @@ API="$SWITCH_URL/gateway"
 for tool in curl jq git python3 openssl "$CONTROLLER_BIN"; do
   command -v "$tool" >/dev/null || { echo "missing: $tool" >&2; exit 1; }
 done
+if [ "$(id -u)" -ne 0 ]; then
+  command -v sudo >/dev/null && sudo -v || { echo "installing the wrapper needs root: run as root or with sudo" >&2; exit 1; }
+fi
 curl -fsS "$SWITCH_URL/health" >/dev/null || { echo "Switch core isn't answering at $SWITCH_URL" >&2; exit 1; }
 
 umask 077
