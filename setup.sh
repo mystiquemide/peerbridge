@@ -195,7 +195,7 @@ In api-sync:
      @$BACKEND_NAME you can run allowlisted requests from agents in this room against my local backend for this session.
   2. Dev B asks:
      @$FRONTEND_NAME check POST /v2/checkout against Dev A
-$([ -z "${OPENAI_API_KEY:-}" ] && echo "No OPENAI_API_KEY was set: give deva-box and devb-box a Codex login from Switch Console first.")
+$([ -z "${OPENAI_API_KEY:-}" ] && echo "No OPENAI_API_KEY was set: if deva-box and devb-box have no Codex login yet, give them one from Switch Console.")
 Allow backend-agent's Codex sandbox to escalate exactly /opt/peerbridge/bin/peerbridge-call.
 Stop everything with: kill \$(cat $WORK/*.pid)
 DONE
