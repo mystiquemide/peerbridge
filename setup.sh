@@ -16,6 +16,7 @@
 #   CODEX_MODEL      model for both agents (default: the provider's default)
 #   CONTROLLER_BIN   switch-agent-controller command (default switch-agent-controller)
 #   BACKEND_PORT     Dev A's backend port (default 8001)
+#   EMAIL_DOMAIN     domain for the two accounts (default switch.local)
 set -euo pipefail
 
 : "${SWITCH_DIR:?set SWITCH_DIR to your Switch checkout}"
@@ -23,6 +24,7 @@ SWITCH_URL="${SWITCH_URL:-http://127.0.0.1:8000}"
 WORK="${PEERBRIDGE_WORK:-$HOME/peerbridge-demo}"
 CONTROLLER_BIN="${CONTROLLER_BIN:-switch-agent-controller}"
 BACKEND_PORT="${BACKEND_PORT:-8001}"
+DOMAIN="${EMAIL_DOMAIN:-switch.local}"
 REPO="$(cd "$(dirname "$0")" && pwd)"
 API="$SWITCH_URL/gateway"
 
@@ -70,14 +72,14 @@ for who in deva devb; do
     pass="$(openssl rand -base64 24 | tr -d '/+=')Aa1!"
     name=$([ "$who" = deva ] && echo "Dev A" || echo "Dev B")
     api "$WORK/jars/admin" POST /users \
-      "$(jq -n --arg e "$who@switch.local" --arg n "$name" --arg p "$pass" '{email:$e,name:$n,password:$p}')" >/dev/null
+      "$(jq -n --arg e "$who@$DOMAIN" --arg n "$name" --arg p "$pass" '{email:$e,name:$n,password:$p}')" >/dev/null
     echo "$var=$pass" >> "$CREDS"
     printf -v "$var" '%s' "$pass"
-    echo "created $who@switch.local"
+    echo "created $who@$DOMAIN"
   else
-    echo "$who@switch.local exists"
+    echo "$who@$DOMAIN exists"
   fi
-  login "$who" "$who@switch.local" "${!var}"
+  login "$who" "$who@$DOMAIN" "${!var}"
 done
 DEVB_ID=$(api "$WORK/jars/devb" GET /auth/me | jq -r '.id // .user.id')
 
