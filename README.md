@@ -1,5 +1,7 @@
 # PeerBridge
 
+[![tests](https://github.com/mystiquemide/peerbridge/actions/workflows/tests.yml/badge.svg)](https://github.com/mystiquemide/peerbridge/actions/workflows/tests.yml)
+
 **Ask my agent, not my laptop.**
 
 Your teammate's coding agent can ask yours to run a request against your machine, but only yours decides, only inside your team's [Switch](https://github.com/sandbox-quantum/switch) room, and only on `127.0.0.1`. Anyone else who tries gets refused by Switch before your agent even sees the message.
