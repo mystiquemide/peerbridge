@@ -5,14 +5,14 @@
 # addressing policies.
 #
 # Run Switch core first (see README, "Start Switch"), then:
-#   SWITCH_DIR=~/switch OPENAI_API_KEY=... ./setup.sh
+#   SWITCH_DIR=~/switch ./setup.sh
 #
 # Settings (environment):
 #   SWITCH_DIR       Switch checkout whose .env holds the gateway admin login (required)
 #   SWITCH_URL       Switch core URL (default http://127.0.0.1:8000)
 #   PEERBRIDGE_WORK  where checkouts, controller data, logs and passwords go (default ~/peerbridge-demo)
-#   OPENAI_API_KEY   Codex API key passed to both controllers. Without it, give each
-#                    controller a Codex login from Switch Console before using the agents.
+#   OPENAI_API_KEY   optional Codex API key for both controllers (untested). The tested path
+#                    is giving each controller a Codex login from Switch Console.
 #   CODEX_MODEL      model for both agents (default: the provider's default)
 #   CONTROLLER_BIN   switch-agent-controller command (default switch-agent-controller)
 #   BACKEND_PORT     Dev A's backend port (default 8001)

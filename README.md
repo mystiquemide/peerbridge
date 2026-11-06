@@ -124,14 +124,14 @@ Check it with `curl -s 127.0.0.1:8000/health`.
 Install `switch-agent-controller` from Switch's checkout (`console/packages/agent-controller`, see its README), plus `jq`. Then, from this repo:
 
 ```bash
-SWITCH_DIR=~/switch OPENAI_API_KEY=<key> ./setup.sh
+SWITCH_DIR=~/switch ./setup.sh
 ```
 
-`setup.sh` creates Dev A and Dev B, enrolls and starts a controller for each, clones a checkout per developer, starts Dev A's backend on `127.0.0.1:8001`, installs the wrapper (it asks for `sudo`), creates both agents, creates `api-sync`, and applies both addressing policies. Passwords go to `~/peerbridge-demo/credentials.env`. It's safe to re-run: existing users, controllers, agents and the room are reused. Without `OPENAI_API_KEY`, give each controller a Codex login from Switch Console. Set `CODEX_MODEL` if your account needs a specific model.
+`setup.sh` creates Dev A and Dev B, enrolls and starts a controller for each, clones a checkout per developer, starts Dev A's backend on `127.0.0.1:8001`, installs the wrapper (it asks for `sudo`), creates both agents, creates `api-sync`, and applies both addressing policies. Passwords go to `~/peerbridge-demo/credentials.env`. It's safe to re-run: existing users, controllers, agents and the room are reused. Then give each controller a Codex login from Switch Console, which is the path we tested. Passing `OPENAI_API_KEY` to `setup.sh` hands an API key to both controllers instead, but we haven't tested that. Set `CODEX_MODEL` if your account needs a specific model.
 
 To deploy from Switch Console instead, Dev A uses `peerbridge-backend.template.yaml` and Dev B uses `peerbridge-frontend.template.yaml`. The steps after deploying are in each file's header.
 
-Then allow backend-agent's Codex sandbox to escalate exactly one command, `/opt/peerbridge/bin/peerbridge-call`.
+backend-agent's sandbox has no network, so its instructions tell it to ask Codex to run exactly one command outside the sandbox: `/opt/peerbridge/bin/peerbridge-call`. In our runs, with auto mode on, Codex's reviewer approved that request once Dev A had granted access in the room. If your Codex setup asks a person instead, approve that one command and nothing else.
 
 ### 3. Try it
 
@@ -144,11 +144,12 @@ Then Dev B posts `@frontend-agent check POST /v2/checkout against Dev A`.
 ### Tests
 
 ```bash
+python3 -m venv .venv && .venv/bin/pip install -r sample/backend/requirements.txt
 .venv/bin/python -m unittest tests.test_peerbridge_call tests.test_templates -v
 cd sample/frontend && npm install && npm run typecheck
 ```
 
-The tests check that the templates match the instructions. The 16 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning.
+CI runs the same checks on every push. The tests check that the templates match the instructions. The 16 wrapper tests start the real sample backend. They cover the 422 and 200 paths, every refusal case with proof that no request was sent, duplicate message ids, `--rerun`, and config pinning.
 
 ## Evidence from real runs
 
