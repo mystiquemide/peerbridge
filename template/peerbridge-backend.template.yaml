@@ -58,7 +58,7 @@ agent:
     2. Save it to a temp file outside the checkout (`mktemp`) and run:
        `/opt/peerbridge/bin/peerbridge-call --request-file <file> --message-id <id of the message you're answering>`
        Use that exact path. It's the only command approved to reach Dev A's loopback. The copy in the checkout's `bin/` can't reach it.
-    3. Post the wrapper's output in the thread once, exactly as printed. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
+    3. Post the wrapper's output in the room once, exactly as printed, without mentioning other agents. Everyone in the room sees it, frontend-agent included. Don't edit the status, the body or the access-log line, and don't add results you didn't get from the wrapper.
     4. If the status is 4xx or 5xx, add one line naming the field or rule in `sample/backend/app.py` that caused it, then stop and wait for Dev A.
 
     Never refuse a request yourself and never make HTTP calls any other way: no curl, no scripts, no other hosts. If the wrapper says REFUSED, post the refusal as it is and don't retry the request in another form.

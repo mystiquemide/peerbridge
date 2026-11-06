@@ -50,7 +50,7 @@ Without Switch, the two agents have no shared channel and nothing stops a third 
 | Managed agents | Each agent's provider, model, instructions, and working directory are set in Switch and pushed to its controller. |
 | Templates | [`peerbridge-backend.template.yaml`](template/peerbridge-backend.template.yaml) creates backend-agent and `api-sync` for Dev A. [`peerbridge-frontend.template.yaml`](template/peerbridge-frontend.template.yaml) creates frontend-agent for Dev B. There's one per owner, because a template's agents belong to whoever deploys it. |
 
-`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The backend template's `bridge` parameter can put `api-sync` in Mattermost, Slack or Discord when one is set up on the server. We haven't tested PeerBridge in a bridged room.
+`api-sync` runs in Switch's built-in chat, so a judge can reproduce it with nothing but Switch. The same loop also ran in a room bridged to Mattermost, with the humans posting in Mattermost and both agents appearing as Mattermost bot users. The backend template's `bridge` parameter puts `api-sync` on a messaging app the server has set up. Slack and Discord weren't tested.
 
 backend-agent's addressing policy:
 
@@ -162,6 +162,7 @@ All of this ran on one Ubuntu 24.04 VPS with Switch core 0.31.0, two controllers
 | Dev B, a human not allowed by the policy, mentions backend-agent | Refused by Switch, no request reached the backend |
 | `DELETE /users` and `GET /admin/config` sent through the room | Refused by the wrapper, nothing sent |
 | `curl 127.0.0.1:8001` from inside the agent's sandbox | Fails. Only the wrapper gets through |
+| The same loop in a Mattermost-bridged room | Pass, 117 s |
 | Commits or pushes during any run | None |
 
 ## Limitations
