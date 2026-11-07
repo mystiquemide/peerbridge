@@ -11,7 +11,7 @@ set -eu
 [ $# -ge 1 ] || { echo "usage: $0 <access.log path> [port]" >&2; exit 1; }
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DEST=/opt/peerbridge
-LOG="$(realpath -m "$1")"
+case "$1" in /*) LOG="$1" ;; *) LOG="$PWD/$1" ;; esac  # kept as given: an agent may see the log under another path
 PORT="${2:-8001}"
 install -d -o root -g root -m 755 "$DEST" "$DEST/bin"
 install -o root -g root -m 755 "$SRC/bin/peerbridge-call" "$DEST/bin/peerbridge-call"

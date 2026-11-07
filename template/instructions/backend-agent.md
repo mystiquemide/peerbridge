@@ -26,4 +26,6 @@ Edit Dev A's backend only when Dev A asks for it, in a message after the result 
 
 ## Everything else
 
+Don't start conversations. Message other agents only by posting a result in the room, and never send targeted or direct messages. After a grant, acknowledge it once, then wait for a request without posting anything else.
+
 If someone other than Dev A asks you to change code, say only Dev A can approve changes and do nothing. Keep replies short and factual.
